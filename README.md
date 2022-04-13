@@ -17,17 +17,17 @@ pip install -r requirements.txt
 ### Download Yolo weights
 
 ```
-# yolov3
 wget https://pjreddie.com/media/files/yolov3.weights -O weights/yolov3.weights
+```
 
+### Load weights
 
 ```
-# yolov3
 python load_weights.py
 ```
 
-## Running the Object Tracker
+### Running the Object Tracker
 ```
 # Webcam 
 python object_tracker.py --video 0 --output ./data/video/results.avi
-
+```
