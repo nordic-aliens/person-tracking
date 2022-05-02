@@ -18,6 +18,14 @@ from deep_sort.tracker import Tracker
 from tools import generate_detections as gdet
 from PIL import Image
 
+
+#For Socket Connection --> Integration II
+import socket
+port = 1234
+hostIP = socket.gethostname()
+isSocketConnected = False
+
+
 flags.DEFINE_string('classes', './data/labels/coco.names', 'path to classes file')
 flags.DEFINE_string('weights', './weights/yolov3.tf',
                     'path to weights file')
@@ -31,6 +39,18 @@ flags.DEFINE_integer('num_classes', 80, 'number of classes in the model')
 
 
 def main(_argv):
+
+    global isSocketConnected
+    # Connect to Socket Server
+    s=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        print("innnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn")
+        s.connect((hostIP, port))
+        isSocketConnected = True
+    except:
+        print("Unable to connect to Face Recognition Server.")
+        isSocketConnected = False
+
     # Definition of the parameters
     max_cosine_distance = 0.5
     nn_budget = None
@@ -77,11 +97,18 @@ def main(_argv):
         frame_index = -1 
     
 
-    queue_faces = []
+    # key --> trackID, value --> userID
     person_id_track_mapping = {}
     fps = 0.0
     count = 0 
+    # print(isSocketConnected)
     while True:
+        # if isSocketConnected == True:
+        #     msg=s.recv(1024)
+        #     print(msg.decode("utf-8"))
+
+       
+
         _, img = vid.read()
 
         if img is None:
@@ -119,6 +146,18 @@ def main(_argv):
         indices = preprocessing.non_max_suppression(boxs, classes, nms_max_overlap, scores)
         detections = [detections[i] for i in indices]        
 
+        ############################################################
+        person_userID = ""
+        if isSocketConnected == True:
+            try:
+                msg=s.recv(1024)
+                person_userID = msg.decode("utf-8")
+                print(msg.decode("utf-8"))
+                print("1")
+            except:
+                print("Error Receiving Socket Data...")
+        #############################################################
+
         # Call the tracker
         tracker.predict()
         tracker.update(detections)
@@ -126,6 +165,18 @@ def main(_argv):
         for track in tracker.tracks:
             if not track.is_confirmed() or track.time_since_update > 1:
                 continue 
+            
+            text = track.track_id
+
+            if track.track_id in person_id_track_mapping.keys():
+                print("2")
+                text = person_id_track_mapping[track.track_id]
+            else:
+                print("3")
+                print(person_userID)
+                if person_userID != "":
+                    print("4")
+                    person_id_track_mapping[track.track_id] = person_userID
 
             bbox = track.to_tlbr()
             class_name = track.get_class()
@@ -134,7 +185,8 @@ def main(_argv):
                 color = [i * 255 for i in color]
                 cv2.rectangle(img, (int(bbox[0]), int(bbox[1])), (int(bbox[2]), int(bbox[3])), color, 2)
                 cv2.rectangle(img, (int(bbox[0]), int(bbox[1]-30)), (int(bbox[0])+(len(class_name)+len(str(track.track_id)))*17, int(bbox[1])), color, -1)
-                cv2.putText(img, class_name + "-" + str(track.track_id),(int(bbox[0]), int(bbox[1]-10)),0, 0.75, (255,255,255),2)
+                # cv2.putText(img, class_name + "-" + str(track.track_id),(int(bbox[0]), int(bbox[1]-10)),0, 0.75, (255,255,255),2)
+                cv2.putText(img, str(text),(int(bbox[0]), int(bbox[1]-10)),0, 0.75, (255,255,255),2)
                 
   
         fps  = ( fps + (1./(time.time()-t1)) ) / 2
@@ -158,6 +210,8 @@ def main(_argv):
         out.release()
         list_file.close()
     cv2.destroyAllWindows()
+
+    # time.sleep(3)
 
 
 if __name__ == '__main__':
