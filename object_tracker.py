@@ -131,8 +131,9 @@ def main(_argv):
                     person_userID = msg.decode("utf-8")
                     print(msg.decode("utf-8"))
                     print("1")
-                    if not msg:
-                        break
+                    s.close()
+                    print("closed")
+                    break
                 except:
                     print("Error Receiving Socket Data...")
         #############################################################
