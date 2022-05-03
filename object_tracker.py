@@ -21,8 +21,8 @@ from PIL import Image
 
 #For Socket Connection --> Integration II
 import socket
-port = 1234
-hostIP = socket.gethostname()
+port = 5555
+hostIP = "192.168.1.104"
 isSocketConnected = False
 
 
@@ -37,19 +37,34 @@ flags.DEFINE_string('output', None, 'path to output video')
 flags.DEFINE_string('output_format', 'XVID', 'codec used in VideoWriter when saving video to file')
 flags.DEFINE_integer('num_classes', 80, 'number of classes in the model')
 
+def createSocket():
+    global isSocketConnected
+    try:
+        s = socket.socket()
+        print("innnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn")
+        s.connect((hostIP, port))
+        print(s)
+        isSocketConnected = True
+            
+    except:
+        print("Unable to connect to Face Recognition Server.")
+        isSocketConnected = False
+    return s
+
 
 def main(_argv):
 
     global isSocketConnected
     # Connect to Socket Server
-    s=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    try:
-        print("innnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn")
-        s.connect((hostIP, port))
-        isSocketConnected = True
-    except:
-        print("Unable to connect to Face Recognition Server.")
-        isSocketConnected = False
+    #s=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    #try:
+	#s = socket.socket()
+        #print("innnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn")
+        #s.connect((hostIP, port))
+        #isSocketConnected = True
+    #except:
+        #print("Unable to connect to Face Recognition Server.")
+        #isSocketConnected = False
 
     # Definition of the parameters
     max_cosine_distance = 0.5
@@ -103,11 +118,24 @@ def main(_argv):
     count = 0 
     # print(isSocketConnected)
     while True:
-        # if isSocketConnected == True:
-        #     msg=s.recv(1024)
-        #     print(msg.decode("utf-8"))
+        s = createSocket()
 
-       
+        ############################################################
+        person_userID = ""
+        print("isConnected:" , isSocketConnected)
+        if isSocketConnected == True:
+            print("in")
+            while True:
+                try:
+                    msg=s.recv(1024)
+                    person_userID = msg.decode("utf-8")
+                    print(msg.decode("utf-8"))
+                    print("1")
+                    if not msg:
+                        break
+                except:
+                    print("Error Receiving Socket Data...")
+        #############################################################
 
         _, img = vid.read()
 
@@ -146,17 +174,19 @@ def main(_argv):
         indices = preprocessing.non_max_suppression(boxs, classes, nms_max_overlap, scores)
         detections = [detections[i] for i in indices]        
 
-        ############################################################
-        person_userID = ""
-        if isSocketConnected == True:
-            try:
-                msg=s.recv(1024)
-                person_userID = msg.decode("utf-8")
-                print(msg.decode("utf-8"))
-                print("1")
-            except:
-                print("Error Receiving Socket Data...")
-        #############################################################
+        # ############################################################
+        # person_userID = ""
+        # print("isConnected:" , isSocketConnected)
+        # if isSocketConnected == True:
+        #     print("in")
+        #     try:
+        #         msg=s.recv(1024)
+        #         person_userID = msg.decode("utf-8")
+        #         print(msg.decode("utf-8"))
+        #         print("1")
+        #     except:
+        #         print("Error Receiving Socket Data...")
+        # #############################################################
 
         # Call the tracker
         tracker.predict()
